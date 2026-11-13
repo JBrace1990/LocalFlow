@@ -1,0 +1,43 @@
+name: Windows installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+      - name: Build application
+        run: npm run build
+      - name: Package Windows installer
+        run: npx electron-builder --win nsis --x64
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      - name: Verify installer artifact
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release/Local-Flow-Setup-*.exe | Select-Object -First 1
+          if (-not $installer) { throw 'Windows installer was not produced.' }
+          if ($installer.Length -lt 50000000) { throw "Installer is unexpectedly small: $($installer.Length) bytes." }
+          Get-FileHash $installer.FullName -Algorithm SHA256 | Format-List
+      - name: Publish installer to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/Local-Flow-Setup-*.exe
+          generate_release_notes: true

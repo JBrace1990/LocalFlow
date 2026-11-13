@@ -1,0 +1,23 @@
+.queue-popover-wrap{position:relative;display:flex;align-items:center}
+.queue-topbar-trigger{height:28px;display:flex;align-items:center;gap:7px;padding:0 9px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--soft);font-size:10px;white-space:nowrap}
+.queue-topbar-trigger:hover,.queue-topbar-trigger.has-active{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));color:var(--text,#f3f2ed)}
+.queue-topbar-trigger>svg{color:var(--accent)}
+.queue-topbar-trigger>b{min-width:17px;height:17px;display:grid;place-items:center;padding:0 4px;border-radius:9px;background:var(--accent);color:var(--accentText,#171a0c);font-size:9px;font-weight:700}
+.queue-popover{position:absolute;z-index:60;top:calc(100% + 9px);right:0;width:340px;max-width:min(340px,calc(100vw - 24px));padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 14px 38px #0006;color:var(--text,#f3f2ed)}
+.queue-popover-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 1px 10px;border-bottom:1px solid var(--line)}
+.queue-popover-head>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.queue-popover-head b{font-size:12px;font-weight:650}
+.queue-popover-head small,.queue-popover-item small,.queue-popover-empty,.queue-popover-more{color:var(--muted);font-size:10px}
+.queue-popover-head .text-button{height:25px;flex:none}
+.queue-popover-list{display:flex;flex-direction:column;max-height:280px;overflow:auto}
+.queue-popover-item{min-height:48px;display:flex;align-items:center;gap:9px;border-bottom:1px solid color-mix(in srgb,var(--line) 72%,transparent)}
+.queue-popover-dot{width:7px;height:7px;flex:none;border-radius:50%;background:#898a82}
+.queue-popover-dot.running{background:var(--accent);box-shadow:0 0 8px color-mix(in srgb,var(--accent) 50%,transparent)}
+.queue-popover-copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.queue-popover-copy b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:600}
+.queue-popover-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
+.queue-popover-state{flex:none;font-size:9px!important}
+.queue-popover-empty{padding:18px 3px 8px;line-height:1.45}
+.queue-popover-more{padding-top:8px;text-align:center}
+.app-shell.theme-ivory .queue-topbar-trigger{color:#31405a}
+.app-shell.theme-ivory .queue-popover{color:#17253d;box-shadow:0 14px 38px #15213a30}

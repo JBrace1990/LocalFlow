@@ -1,0 +1,34 @@
+.brand-home{width:100%;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.brand-home:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.dashboard-page{width:100%;max-width:none;margin:0;padding:clamp(26px,4vw,56px) clamp(24px,5vw,76px);min-height:calc(100vh - 64px);box-sizing:border-box}
+.dashboard-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:26px;margin-bottom:24px;border-bottom:1px solid var(--line)}
+.dashboard-heading h1{margin:8px 0;font-size:clamp(28px,3vw,40px);letter-spacing:-.035em}
+.dashboard-heading p{margin:0;color:var(--muted);font-size:14px}
+.dashboard-heading-actions{display:flex;align-items:center;gap:10px;flex:none}
+.dashboard-trash-count{min-width:19px;height:19px;margin-left:2px;display:inline-grid;place-items:center;border-radius:10px;background:color-mix(in srgb,var(--accent) 18%,var(--panel));font-size:11px}
+.dashboard-project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:18px;align-items:start}
+.dashboard-project-card{position:relative;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:visible;transition:border-color .18s,transform .18s,box-shadow .18s}
+.dashboard-project-card:hover{border-color:color-mix(in srgb,var(--accent) 65%,var(--line));transform:translateY(-2px);box-shadow:0 14px 30px #0002}
+.dashboard-project-open{display:block;width:100%;padding:0;text-align:left;color:inherit;border:0;background:transparent;cursor:pointer}
+.dashboard-project-cover{height:170px;position:relative;overflow:hidden;border-radius:9px 9px 0 0;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 26%,var(--panel2)),var(--panel2) 55%,color-mix(in srgb,var(--accent) 9%,var(--bg)))}
+.dashboard-project-cover>img{width:100%;height:100%;object-fit:cover;display:block}
+.dashboard-cover-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted)}
+.dashboard-cover-placeholder svg{color:var(--accent)}
+.dashboard-cover-placeholder span,.dashboard-project-kind{font:10px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.11em}
+.dashboard-project-kind{position:absolute;left:12px;bottom:11px;padding:6px 8px;border:1px solid #ffffff2e;border-radius:5px;background:#101114b8;color:#fff;backdrop-filter:blur(8px)}
+.dashboard-project-info{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px;padding:12px 14px}
+.dashboard-project-info>span{display:flex;flex-direction:column;gap:5px;min-width:0}
+.dashboard-project-info b{font-size:14px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-project-info small{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-project-info>svg{flex:none;color:var(--muted)}
+.dashboard-project-actions{position:absolute;right:9px;top:9px;z-index:5}
+.dashboard-project-actions>.icon-button{width:32px;height:32px;border:1px solid #ffffff30;border-radius:7px;background:#101114b8;color:#fff;backdrop-filter:blur(8px)}
+.dashboard-project-menu{position:absolute;top:calc(100% + 5px);right:0;width:200px;padding:5px;border:1px solid var(--line);border-radius:8px;background:var(--panel);box-shadow:0 12px 30px #0004;z-index:20}
+.dashboard-project-menu button{width:100%;display:flex;align-items:center;gap:9px;padding:10px;border:0;border-radius:5px;background:transparent;color:var(--soft);font:inherit;font-size:12px;text-align:left;cursor:pointer}
+.dashboard-project-menu button:hover{background:var(--panel2)}
+.dashboard-project-menu button.danger{color:#ef8076}
+.dashboard-empty{min-height:min(58vh,540px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:36px}
+.dashboard-empty-icon{width:52px;height:52px;margin-bottom:18px;display:grid;place-items:center;border:1px solid var(--line);border-radius:15px;background:var(--panel);color:var(--accent)}
+.dashboard-empty h2{margin:10px 0;font-size:25px}
+.dashboard-empty p{max-width:450px;margin:0 0 22px;color:var(--muted);line-height:1.6}
+@media(max-width:680px){.dashboard-page{padding:24px 16px}.dashboard-heading{align-items:flex-start;flex-direction:column}.dashboard-heading-actions{width:100%;flex-wrap:wrap}.dashboard-heading-actions>*{flex:1;justify-content:center}.dashboard-project-grid{grid-template-columns:1fr}}
