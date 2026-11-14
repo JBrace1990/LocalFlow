@@ -11,11 +11,49 @@ const start = source.indexOf('function localMiniMaxH3ReferenceWorkflow(');
 const end = source.indexOf('\nasync function uploadComfyInputImage(', start);
 assert.ok(start >= 0 && end > start, 'MiniMax H3 reference workflow builder should be available');
 const buildWorkflow = vm.runInNewContext(
-  `${source.slice(start, end)}; localMiniMaxH3ReferenceWorkflow`,
+  `${source.slice(start, end)}; ({ localMiniMaxH3ReferenceWorkflow, buildMiniMaxH3VideoWorkflowForSource })`,
 );
 
+test('storyboard-to-video uses the approved keyframe as the opening image, not design reference sheets', () => {
+  const result = buildWorkflow.buildMiniMaxH3VideoWorkflowForSource({
+    prompt: 'Animate the fox meeting the man.',
+    prefix: 'scene-01',
+    durationSeconds: 5,
+    resolution: '340p',
+    aspectRatio: '16:9',
+    sourceMode: 'storyboard',
+    referenceImageNames: ['fox-turnaround.png', 'man-turnaround.png'],
+    imageName: 'approved-scene.png',
+    endImageName: null,
+  });
+
+  assert.equal(result.graph['6'].class_type, 'MiniMaxH3ImageToVideo');
+  assert.equal(result.graph['5'].inputs.image, 'approved-scene.png');
+  assert.deepEqual(Array.from(result.imageInputNames), ['approved-scene.png']);
+  assert.equal(result.nativeVideoReferenceWorkflow, false);
+});
+
+test('text-to-video retains reference conditioning when reference images are selected', () => {
+  const result = buildWorkflow.buildMiniMaxH3VideoWorkflowForSource({
+    prompt: '<Picture 1> is the fox.',
+    prefix: 'scene-01',
+    durationSeconds: 5,
+    resolution: '340p',
+    aspectRatio: '16:9',
+    sourceMode: 'text',
+    referenceImageNames: ['fox-turnaround.png'],
+    imageName: null,
+    endImageName: null,
+  });
+
+  assert.equal(result.graph['6'].class_type, 'MiniMaxH3ReferenceToVideo');
+  assert.equal(result.graph['30'].inputs.image, 'fox-turnaround.png');
+  assert.deepEqual(Array.from(result.imageInputNames), ['fox-turnaround.png']);
+  assert.equal(result.nativeVideoReferenceWorkflow, true);
+});
+
 test('MiniMax H3 maps each visual reference to the matching ordered Picture slot', () => {
-  const graph = buildWorkflow(
+  const graph = buildWorkflow.localMiniMaxH3ReferenceWorkflow(
     '<Picture 1> is Captain Voss. <Picture 2> is Vanguard.',
     'scene-01',
     5,
@@ -36,7 +74,7 @@ test('MiniMax H3 maps each visual reference to the matching ordered Picture slot
 });
 
 test('reference-conditioned video can retain exact opening and ending storyboard anchors', () => {
-  const graph = buildWorkflow(
+  const graph = buildWorkflow.localMiniMaxH3ReferenceWorkflow(
     '<Picture 1> is Captain Voss.',
     'scene-01',
     5,

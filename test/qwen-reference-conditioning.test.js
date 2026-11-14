@@ -37,4 +37,22 @@ test('Qwen reference slots preserve the same order and roles as the attached ima
   assert.match(graph['4'].inputs.prompt, /<image2> is Vanguard.*vehicle design and silhouette/i);
   assert.match(graph['4'].inputs.prompt, /<image3> is Vanguard bridge.*environment design/i);
   assert.match(graph['4'].inputs.prompt, /new composition that follows the requested action and scene/i);
+  assert.equal(graph['7'].inputs.latent_image.join(','), '4,2', 'reference generation must sample from the encoder latent sized for the first reference');
+});
+
+test('Qwen text-to-image without references keeps the requested output aspect ratio', () => {
+  const graph = buildWorkflow('A quiet forest at blue hour.', 'test/text-only', 0, '16:9', 1024);
+  assert.equal(graph['6'].class_type, 'EmptyLatentImage');
+  assert.equal(graph['6'].inputs.width / graph['6'].inputs.height, 16 / 9);
+  assert.equal(graph['7'].inputs.latent_image.join(','), '6,0');
+});
+
+test('Qwen does not mix design-sheet rendering instructions into character or location identity references', () => {
+  const prompt = buildPrompt('The man kneels beside the injured fox at the garden gate.', [
+    { assetName: 'Man', role: 'character', assetDescription: 'Japanese man in an indigo work jacket.', assetVisualStyle: 'Turnaround sheet only; no fox or other characters.' },
+    { assetName: 'Garden', role: 'location', assetDescription: 'Small garden with a wooden gate.', assetVisualStyle: 'Environment plate only; no people or animals.' },
+  ], 2);
+  assert.match(prompt, /Japanese man in an indigo work jacket/);
+  assert.match(prompt, /Small garden with a wooden gate/);
+  assert.doesNotMatch(prompt, /Turnaround sheet only|no fox or other characters|Environment plate only|no people or animals/i);
 });

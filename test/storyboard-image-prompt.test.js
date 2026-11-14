@@ -28,7 +28,7 @@ test('compiled storyboard prompt preserves both scene action and detailed image 
   assert.match(prompt, /frame his hand reaching for the sidearm/);
 });
 
-test('compiled storyboard prompt carries assigned asset identity, proposed design, and series style', () => {
+test('compiled storyboard prompt uses fixed asset identity without leaking design-sheet layout instructions', () => {
   const prompt = compileStoryboardImagePrompt({
     number: 2,
     title: 'Voss takes aim',
@@ -38,13 +38,12 @@ test('compiled storyboard prompt carries assigned asset identity, proposed desig
     name: 'Captain Voss',
     category: 'Character',
     description: 'Rugged adult captain with short dark brown hair and navy uniform.',
-    designExpansion: 'Broad shoulders, angular jaw, charcoal shoulder panels.',
-    visualStyle: 'Clean ink contours and controlled cel-shaded shadows.',
+    designExpansion: 'Character turnaround sheet, show front and side views. No fox or other characters.',
+    visualStyle: 'Reference sheet only; do not place in a story scene.',
   }]);
 
   assert.match(prompt, /anime cinematic, crisp blue-gray cel shading/);
   assert.match(prompt, /Captain Voss \(Character\)/);
   assert.match(prompt, /short dark brown hair and navy uniform/);
-  assert.match(prompt, /Broad shoulders, angular jaw, charcoal shoulder panels/);
-  assert.match(prompt, /Clean ink contours and controlled cel-shaded shadows/);
+  assert.doesNotMatch(prompt, /turnaround sheet|front and side views|No fox|Reference sheet only|do not place in a story scene/i);
 });

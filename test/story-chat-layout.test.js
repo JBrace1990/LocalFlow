@@ -56,8 +56,39 @@ test('chat messages use simple left/right message bubbles without avatars', asyn
   const css = postcss.parse(await readFile(fileURLToPath(new URL('../src/style.css', import.meta.url)), 'utf8'));
   assert.doesNotMatch(app, /<div className="story-chat-avatar">/);
   let userAlignment;
-  css.walkRules('.story-chat-message.user', rule => {
-    userAlignment = rule.nodes.find(node => node.type === 'decl' && node.prop === 'margin-left')?.value;
+  let userPosition;
+  let assistantPosition;
+  let messageFlow;
+  let rowWidth;
+  let rowMaxWidth;
+  let userBubble;
+  let assistantBubble;
+  css.walkRules('.story-chat-message', rule => {
+    rowWidth = rule.nodes.find(node => node.type === 'decl' && node.prop === 'width')?.value;
+    rowMaxWidth = rule.nodes.find(node => node.type === 'decl' && node.prop === 'max-width')?.value;
   });
-  assert.equal(userAlignment, 'auto');
+  css.walkRules('.story-chat-message.user', rule => {
+    userAlignment = rule.nodes.find(node => node.type === 'decl' && node.prop === 'align-self')?.value;
+  });
+  css.walkRules('.story-chat-message.assistant', rule => {
+    assistantPosition = rule.nodes.find(node => node.type === 'decl' && node.prop === 'align-self')?.value;
+  });
+  css.walkRules('.story-chat-messages', rule => {
+    const display = rule.nodes.find(node => node.type === 'decl' && node.prop === 'display')?.value;
+    if (display) messageFlow = display;
+  });
+  css.walkRules('.story-chat-message.user>div:last-child', rule => {
+    userBubble = rule.nodes.find(node => node.type === 'decl' && node.prop === 'background')?.value;
+  });
+  css.walkRules('.story-chat-message.assistant>div:last-child', rule => {
+    assistantBubble = rule.nodes.find(node => node.type === 'decl' && node.prop === 'background')?.value;
+  });
+  assert.equal(userAlignment, 'flex-end');
+  assert.equal(assistantPosition, 'flex-start');
+  assert.equal(messageFlow, 'flex');
+  assert.equal(rowWidth, 'fit-content');
+  assert.equal(rowMaxWidth, 'min(760px,86%)');
+  assert.ok(userBubble);
+  assert.ok(assistantBubble);
+  assert.notEqual(userBubble, assistantBubble);
 });

@@ -76,6 +76,28 @@ test('storyboard video automatically attaches its selected start and flow ending
   );
 });
 
+test('storyboard video prompt uses the approved frame and scene action without enumerating design sheets', () => {
+  const prompt = compileStoryboardVideoPrompt({
+    scene: {
+      title: 'Rescue in the rain',
+      description: 'The fox watches the man notice her at the garden gate.',
+      prompt: 'Modern anime shot. Visual reference assignments: Reference 1 is the palette; Reference 2 is the fox turnaround.',
+    },
+    project: { name: "The Fox's Wish", visualBible: { style: 'Modern Japanese anime; rain-blue and amber palette' } },
+    startScene: { title: 'Rescue in the rain' },
+    assets: [{ name: 'The Fox', description: 'Fox turnaround sheet; three poses and face crops.' }],
+    references: [{ assetName: 'The Fox turnaround', referenceRole: 'character' }],
+    videoMode: 'storyboard',
+    separateReferences: true,
+  });
+
+  assert.match(prompt, /Required opening story action: The fox watches the man notice her at the garden gate/);
+  assert.match(prompt, /exact opening frame/);
+  assert.match(prompt, /single continuous shot/i);
+  assert.match(prompt, /Do not show character sheets, turnarounds, design boards, palettes, montages, cutaways, or additional scenes/i);
+  assert.doesNotMatch(prompt, /Visual reference assignments|Reference 1 is the palette|Fox turnaround sheet|<Picture 1>/);
+});
+
 test('MiniMax H3 reference prompts name each image with its native Picture token', () => {
   const prompt = compileStoryboardVideoPrompt({
     scene: { title: 'Voss takes aim.' },
@@ -83,6 +105,7 @@ test('MiniMax H3 reference prompts name each image with its native Picture token
       { assetName: 'Captain Voss', referenceRole: 'character' },
       { assetName: 'Vanguard', referenceRole: 'vehicle' },
     ],
+    videoMode: 'text',
     separateReferences: true,
   });
 

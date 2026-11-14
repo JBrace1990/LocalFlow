@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { isFaithfulEnhancedSetting } from '../src/prompt-enhancement.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const source = await fs.readFile(path.join(root, 'server.js'), 'utf8');
@@ -17,13 +18,6 @@ assert.ok(start >= 0 && end > start, 'Enhance response quality validator should 
 const isMeaningfullyEnhancedPrompt = vm.runInNewContext(
   `${source.slice(start, end)}; isMeaningfullyEnhancedPrompt`,
 );
-const settingStart = source.indexOf('function isFaithfulEnhancedSetting(');
-const settingEnd = source.indexOf('\nfunction ', settingStart + 10);
-assert.ok(settingStart >= 0 && settingEnd > settingStart, 'Enhance setting-preservation validator should remain available');
-const isFaithfulEnhancedSetting = vm.runInNewContext(
-  `${source.slice(settingStart, settingEnd)}; isFaithfulEnhancedSetting`,
-);
-
 test('Enhance rejects a verbatim echo of the source prompt', () => {
   const prompt = 'Captain Voss draws his sidearm in the ship corridor.';
   assert.equal(isMeaningfullyEnhancedPrompt(prompt, prompt), false);
@@ -45,11 +39,13 @@ test('Enhance preserves a broad spacecraft setting without inventing a bridge or
   assert.equal(isFaithfulEnhancedSetting(creatorContext, 'Voss raises his sidearm on the spacecraft bridge.'), false);
   assert.equal(isFaithfulEnhancedSetting(creatorContext, 'Voss raises his sidearm against a plain untextured gradient background.'), false);
   assert.equal(isFaithfulEnhancedSetting(creatorContext, 'Voss raises his sidearm within the same spacecraft setting, framed in a close three-quarter shot with cool warning light.'), true);
+  assert.equal(isFaithfulEnhancedSetting(creatorContext, 'Voss raises his sidearm in the spacecraft interior.'), false);
 });
 
 test('Enhance limits AI additions to visual direction and avoids inventing scene canon', () => {
   assert.match(enhanceRoute, /Do not invent or name a specific location, background, environment, prop, character, or story object/i);
   assert.match(enhanceRoute, /If the creator names only a broad setting, preserve it at that same level/i);
+  assert.match(enhanceRoute, /do not invent a ship interior/i);
   assert.match(enhanceRoute, /If no setting is named anywhere, use a restrained neutral backdrop without adding story objects/i);
   assert.doesNotMatch(enhanceRoute, /If no setting is specified, use only a plain, untextured gradient background/i);
   assert.match(enhanceRoute, /Do not infer where a weapon or other prop is carried or stored/i);

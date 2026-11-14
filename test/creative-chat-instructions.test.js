@@ -3,10 +3,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
+import { isDesignPreparationQuestion, lastQuestion, storyChatYesNoChoices } from '../src/story-chat-approval.js';
+import { buildCreatorCanonContext } from '../src/story-chat-canon.js';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const source = await fs.readFile(path.join(root, 'server.js'), 'utf8');
+const uiSource = await fs.readFile(path.join(root, 'src/main.jsx'), 'utf8');
 const start = source.indexOf('function buildCreativeChatSystem(');
 const end = source.indexOf('\nfunction ', start + 10);
 assert.ok(start >= 0 && end > start, 'Story Chat system prompt builder should remain available');
@@ -33,11 +36,46 @@ test('Story Chat retains explicit creator canon and requires approval before sto
   assert.match(system, /Only after that explicit approval/i);
 });
 
+test('Story Chat injects every creator-authored turn as durable canon alongside the recent transcript', () => {
+  const messages = [
+    { role: 'user', content: 'The fox loves the man, but he only cares for her as the fox he rescued. Do not make the love mutual or turn them into a couple.' },
+    ...Array.from({ length: 24 }, (_, index) => ({ role: index % 2 ? 'assistant' : 'user', content: `Conversation turn ${index}.` })),
+  ];
+  const canon = buildCreatorCanonContext(messages);
+  const system = buildSystem({ creatorCanon: canon });
+
+  assert.match(system, /Do not make the love mutual or turn them into a couple\./);
+  assert.match(system, /A later creator statement overrides earlier canon only when it clearly changes it/);
+  assert.match(source, /creatorCanon=buildCreatorCanonContext\(messages\)/);
+});
+
+test('visual-development planning builds its brief from creator turns only', () => {
+  const start = uiSource.indexOf('const startStoryFromChat=async');
+  const end = uiSource.indexOf('const reviseStoryboardDraft=async', start);
+  assert.ok(start >= 0 && end > start, 'visual-development plan request should remain available');
+  const handler = uiSource.slice(start, end);
+  assert.match(handler, /buildCreatorOnlyBrief\(conversation\)/);
+  assert.match(handler, /creatorMessages=conversation\.filter\(message=>message\?\.role==='user'/);
+  assert.doesNotMatch(handler, /conversation\.map\(message=>`\$\{message\.role==='user'\?'Creator':'Assistant'/);
+});
+
+test('visual-development API retries and rejects plans that contradict creator canon', () => {
+  const routeStart = source.indexOf("if (url.pathname === '/api/visual-development/plan'");
+  const routeEnd = source.indexOf("if (url.pathname === '/api/assets/develop'", routeStart);
+  assert.ok(routeStart >= 0 && routeEnd > routeStart, 'visual-development plan endpoint should remain available');
+  const route = source.slice(routeStart, routeEnd);
+  assert.match(route, /creatorMessages/);
+  assert.match(route, /findVisualPlanCanonConflicts\(result,creatorMessages\)/);
+  assert.match(route, /CANON VALIDATION FAILED/);
+  assert.match(route, /story plan conflicts with creator-approved canon and was not accepted/);
+});
+
 const choicesStart = source.indexOf('function creativeChatOptionChoices(');
 const choicesEnd = source.indexOf('\nasync function bodyJson', choicesStart);
 assert.ok(choicesStart >= 0 && choicesEnd > choicesStart, 'Story Chat choice mapper should remain available');
 const mapChoices = vm.runInNewContext(
   `${source.slice(choicesStart, choicesEnd)}; creativeChatOptionChoices`,
+  { isDesignPreparationQuestion, lastQuestion, storyChatYesNoChoices },
 );
 test('Story Chat choice buttons reflect enumerated options in the active question', () => {
   const choices = mapChoices('What aspect of the planet should be emphasized? Should it be its ability to heal, communicate, or something else?');
@@ -45,6 +83,13 @@ test('Story Chat choice buttons reflect enumerated options in the active questio
   assert.match(choices[0].reply, /prefer heal/i);
   const planetChoices = mapChoices('Should it be bioluminescent, sentient, or something else?');
   assert.deepEqual(Array.from(planetChoices, choice => choice.label), ['Bioluminescent', 'Sentient', 'Something Else']);
+});
+test('Story Chat turns numbered ending alternatives into selectable, specific replies', () => {
+  const choices = mapChoices('1. The fox becomes human, but her next choice remains open.\n2. The fox remains a fox and chooses to leave freely.\n3. The wish starts to transform her as dawn breaks.\n\nWhich ending direction do you prefer?');
+  assert.equal(choices.length, 3);
+  assert.match(choices[0].label, /fox becomes human/i);
+  assert.match(choices[0].reply, /fox becomes human/i);
+  assert.match(choices[1].reply, /chooses to leave freely/i);
 });
 
 const normalizeStart = source.indexOf('function normalizeCreativeReply(');
@@ -65,6 +110,42 @@ test('Story Chat removes numbered question lists instead of forwarding a questio
   assert.doesNotMatch(reply, /1\. Who is|2\. What is/);
   assert.match(reply, /What should the emotional hook be/);
 });
-test('Story Chat does not offer generic yes/no choices for an open creative question', () => {
-  assert.equal(source.includes('Continue with the direction I described.'), false);
+test('Story Chat preserves numbered creative alternatives while removing question lists', () => {
+  const reply = normalizeReply('Here are three ending proposals:\n\n1. The fox becomes human, but the ending leaves her next choice unresolved.\n2. The fox remains a fox and chooses to leave freely.\n3. The wish begins to transform her as dawn breaks.\n\nWhich direction feels right?');
+  assert.match(reply, /1\. The fox becomes human/);
+  assert.match(reply, /2\. The fox remains a fox/);
+  assert.match(reply, /3\. The wish begins to transform her/);
+  assert.match(reply, /Which direction feels right/);
+});
+test('Story Chat offers no buttons for an open creative question, even if it mentions a known topic', () => {
+  assert.deepEqual(Array.from(mapChoices('What should make the protagonist feel distinctive?')), []);
+  assert.deepEqual(Array.from(mapChoices('What mood should the story have?')), []);
+});
+
+test('Story Chat approval choices answer the specific design-preparation question', () => {
+  const choices = mapChoices('Should I prepare the character and visual asset designs first?');
+  assert.deepEqual(Array.from(choices, choice => choice.label), ['Prepare the design plan', 'Keep refining the story']);
+  assert.match(choices[0].reply, /prepare the character and visual asset designs first/i);
+  assert.match(choices[1].reply, /not yet/i);
+});
+
+test('Story Chat yes/no controls tolerate natural wording for preparation approval', () => {
+  const reply = 'Proposal: the cost remains mysterious. Should I proceed with preparing the character and visual asset designs now?';
+  assert.equal(isDesignPreparationQuestion(reply), true);
+  const choices = mapChoices(reply);
+  assert.equal(choices.length, 2);
+  assert.match(choices[0].reply, /prepare.*character.*visual asset designs/i);
+  assert.match(choices[1].reply, /not yet|clarify|revise/i);
+});
+
+test('Story Chat yes/no controls cover generic assistant actions without inventing choices for open questions', () => {
+  const choices = mapChoices('Would you like me to create the storyboard scenes now?');
+  assert.equal(choices.length, 2);
+  assert.match(choices[0].reply, /create the storyboard scenes/i);
+  assert.deepEqual(Array.from(mapChoices('What should happen to the forest spirit?')), []);
+});
+
+test('Story Chat never falls back to generic response buttons for arbitrary questions', () => {
+  const handler = source.slice(source.indexOf('const replyLower=assistantText.toLowerCase()'), source.indexOf("if(choices.length)res.write('event: choices", source.indexOf('const replyLower=assistantText.toLowerCase()')));
+  assert.doesNotMatch(handler, /Tense and mysterious|One central protagonist|That works for me|Show another option/);
 });
