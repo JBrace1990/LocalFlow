@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
-import { isDesignPreparationQuestion, lastQuestion, storyChatYesNoChoices } from '../src/story-chat-approval.js';
+import { isDesignPreparationQuestion } from '../src/story-chat-approval.js';
+import { creativeChatOptionChoices, hydrateStoryChatChoices } from '../src/story-chat-choices.js';
 import { buildCreatorCanonContext } from '../src/story-chat-canon.js';
 import { fileURLToPath } from 'node:url';
 
@@ -102,13 +103,7 @@ test('visual-development API retries and rejects plans that contradict creator c
   assert.match(route, /story plan conflicts with creator-approved canon and was not accepted/);
 });
 
-const choicesStart = source.indexOf('function creativeChatOptionChoices(');
-const choicesEnd = source.indexOf('\nasync function bodyJson', choicesStart);
-assert.ok(choicesStart >= 0 && choicesEnd > choicesStart, 'Story Chat choice mapper should remain available');
-const mapChoices = vm.runInNewContext(
-  `${source.slice(choicesStart, choicesEnd)}; creativeChatOptionChoices`,
-  { isDesignPreparationQuestion, lastQuestion, storyChatYesNoChoices },
-);
+const mapChoices = creativeChatOptionChoices;
 test('Story Chat choice buttons reflect enumerated options in the active question', () => {
   const choices = mapChoices('What aspect of the planet should be emphasized? Should it be its ability to heal, communicate, or something else?');
   assert.deepEqual(Array.from(choices, choice => choice.label), ['Heal', 'Communicate', 'Something Else']);
@@ -131,9 +126,21 @@ test('Story Chat turns direct either-or decisions into selectable replies', () =
   assert.deepEqual(Array.from(transformationChoices, choice => choice.label), ['Become human', 'Remain a fox']);
   assert.deepEqual(Array.from(mapChoices('What makes the fox distinctive?')), []);
 });
+test('reopening Story Chat restores selectable choices for saved either-or questions', () => {
+  const saved = [
+    { role: 'user', content: 'I want a magical romance.' },
+    { role: 'assistant', content: 'Is it in a specific location or a general urban environment?' },
+    { role: 'assistant', content: 'What should the fox discover?' },
+  ];
+  const hydrated = hydrateStoryChatChoices(saved);
+  assert.deepEqual(hydrated[1].choices.map(choice => choice.label), ['A specific location', 'A general urban environment']);
+  assert.equal(hydrated[2].choices, undefined, 'open-ended questions should remain open-ended');
+  assert.equal(saved[1].choices, undefined, 'hydration should not mutate persisted messages');
+  assert.match(uiSource, /setStoryChatMessages\(hydrateStoryChatChoices\(transcript\)\)/);
+});
 
 const normalizeStart = source.indexOf('function normalizeCreativeReply(');
-const normalizeEnd = source.indexOf('\nfunction creativeChatOptionChoices', normalizeStart);
+const normalizeEnd = source.indexOf('\nasync function bodyJson', normalizeStart);
 assert.ok(normalizeStart >= 0 && normalizeEnd > normalizeStart, 'Creative reply normalizer should remain available');
 const normalizeReply = vm.runInNewContext(
   `${source.slice(normalizeStart, normalizeEnd)}; normalizeCreativeReply`,
