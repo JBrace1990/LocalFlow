@@ -24,6 +24,8 @@ test('Story Chat develops non-canon gaps as proposals and asks one consequential
   assert.match(system, /do not turn routine creative choices into questions/i);
   assert.match(system, /never present an unconfirmed name, motivation, world rule, or plot detail as a fact/i);
   assert.match(system, /advance only one story decision per turn/i);
+  assert.match(system, /never combine separate decisions in one question/i);
+  assert.match(system, /Do not ask about both the setting and a character's profession in the same turn/i);
   assert.match(system, /never return a numbered questionnaire or a list of questions/i);
   assert.match(system, /For missing character motivation, choose a clearly labeled proposal instead of asking the creator to invent one/i);
   assert.match(system, /never ask a vague "Should we proceed\?" question/i);
@@ -36,6 +38,13 @@ test('Story Chat retains explicit creator canon and requires approval before sto
   assert.match(system, /Only after that explicit approval/i);
 });
 
+test('Story Chat explicitly prevents rejected proposals from being recycled as options', () => {
+  const system = buildSystem({ rejectedProposalCount: 1 });
+  assert.match(system, /creator has rejected the immediately preceding assistant proposal/i);
+  assert.match(system, /do not use it as canon or make new options from it/i);
+  assert.match(system, /do not repeat it, extend it, or use its distinctive nouns/i);
+});
+
 test('Story Chat injects every creator-authored turn as durable canon alongside the recent transcript', () => {
   const messages = [
     { role: 'user', content: 'The fox loves the man, but he only cares for her as the fox he rescued. Do not make the love mutual or turn them into a couple.' },
@@ -46,8 +55,20 @@ test('Story Chat injects every creator-authored turn as durable canon alongside 
 
   assert.match(system, /Do not make the love mutual or turn them into a couple\./);
   assert.match(system, /A later creator statement overrides earlier canon only when it clearly changes it/);
-  assert.match(source, /creatorCanon=providedCreatorCanon\|\|buildCreatorCanonContext\(messages\)/);
+  assert.match(source, /sanitizeRejectedStoryChatMessages\(messages\)/);
   assert.match(uiSource, /creatorCanon:buildCreatorCanonContext\(creatorCanonMessages\)/);
+});
+
+test('Story Chat removes rejected proposals from Ollama history and sanitizes the canon text', () => {
+  const start = source.indexOf("if (url.pathname === '/api/creative/chat'");
+  const end = source.indexOf("if (url.pathname === '/api/visual-development/plan'", start);
+  assert.ok(start >= 0 && end > start, 'Story Chat route should remain available');
+  const route = source.slice(start, end);
+
+  assert.match(route, /sanitizeRejectedStoryChatMessages\(messages\)/);
+  assert.match(route, /sanitizedMessages\.filter\(item=>\['user','assistant'\]/);
+  assert.match(route, /sanitizeRejectedStoryChatMessages\(\[\{role:'user',content:providedCreatorCanon\}\]\)/);
+  assert.doesNotMatch(route, /creatorCanon=providedCreatorCanon\|\|buildCreatorCanonContext\(messages\)/);
 });
 
 test('visual-development planning builds its brief from creator turns only', () => {
@@ -101,6 +122,14 @@ test('Story Chat turns numbered ending alternatives into selectable, specific re
   assert.match(choices[0].label, /fox becomes human/i);
   assert.match(choices[0].reply, /fox becomes human/i);
   assert.match(choices[1].reply, /chooses to leave freely/i);
+});
+test('Story Chat turns direct either-or decisions into selectable replies', () => {
+  const settingChoices = mapChoices('Is it in a specific location or a general urban environment?');
+  assert.deepEqual(Array.from(settingChoices, choice => choice.label), ['A specific location', 'A general urban environment']);
+  assert.match(settingChoices[0].reply, /specific location/i);
+  const transformationChoices = mapChoices('Would you like the fox to become human or remain a fox?');
+  assert.deepEqual(Array.from(transformationChoices, choice => choice.label), ['Become human', 'Remain a fox']);
+  assert.deepEqual(Array.from(mapChoices('What makes the fox distinctive?')), []);
 });
 
 const normalizeStart = source.indexOf('function normalizeCreativeReply(');

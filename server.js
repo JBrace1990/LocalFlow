@@ -22,7 +22,7 @@ import { serveMediaFile } from './src/media-response.js';
 import { revealMediaInFileManager } from './src/media-explorer.js';
 import { buildSafeEnhancedPrompt, isFaithfulEnhancedSetting } from './src/prompt-enhancement.js';
 import { uniqueComfyReferenceSlots } from './src/comfy-reference-slots.js';
-import { buildCreatorCanonContext } from './src/story-chat-canon.js';
+import { buildCreatorCanonContext, sanitizeRejectedStoryChatMessages } from './src/story-chat-canon.js';
 import { findVisualPlanCanonConflicts } from './src/visual-development-canon-guard.js';
 import { localWan22I2VWorkflow, wan22Readiness } from './src/wan22-i2v.js';
 
@@ -168,7 +168,7 @@ async function ollamaJson(baseUrl, model, prompt, { numPredict = 4096 } = {}) {
   const raw=String(data.response||'').trim();
   try{return JSON.parse(raw);}catch{const match=raw.match(/\{[\s\S]*\}/);if(match){try{return JSON.parse(match[0]);}catch{}}throw new Error('The local language model returned invalid JSON.');}
 }
-function buildCreativeChatSystem({shotCount=8,style='anime cinematic',assets=[],activeDesign=null,storyboardProposal=null,creatorCanon=''}={}) {
+function buildCreativeChatSystem({shotCount=8,style='anime cinematic',assets=[],activeDesign=null,storyboardProposal=null,creatorCanon='',rejectedProposalCount=0}={}) {
   const system=`You are the collaborative story partner inside Local Flow. Work with the creator on the complete concept before visual assets or scenes are generated. Explore the premise, what makes it distinct, genre and tone, protagonist and motivations, central conflict and stakes, setting, story arc, and desired ending as the conversation develops.
 
 CONVERSATION RULES:
@@ -177,12 +177,13 @@ CONVERSATION RULES:
 - The creator should not have to specify every detail. For non-canon gaps, proactively develop concrete, coherent ideas as clearly labeled AI proposals; do not turn routine creative choices into questions. This includes visual details such as a character's face, clothing, color scheme, art direction, and camera language.
 - For missing character motivation, choose a clearly labeled proposal instead of asking the creator to invent one. Do not ask the creator to define the protagonist, crew, shield, planet, conflict, or ending if they have already given enough premise to suggest a coherent direction.
 - Never present an unconfirmed name, motivation, world rule, or plot detail as a fact. Label each new story idea as a proposal until the creator accepts it.
-- Advance only one story decision per turn. On the first turn, briefly acknowledge the creator's premise, offer one concise and distinctive story-hook proposal grounded in it, then ask at most one specific question about a genuinely consequential unresolved choice. Do not enumerate routine story components.
+- Advance only one story decision per turn. Never combine separate decisions in one question or sentence (for example, do not ask about both the setting and a character's profession in the same turn). Ask about one unresolved story choice only. On the first turn, briefly acknowledge the creator's premise, offer one concise and distinctive story-hook proposal grounded in it, then ask at most one specific question about a genuinely consequential unresolved choice. Do not enumerate routine story components.
 - Ask a question only when an unresolved choice materially changes the creator's intended story and cannot be safely offered as a proposal. When asking, make it specific and easy to answer; offer a few concise choices when useful.
 - Never ask a vague "Should we proceed?" question. Ask the exact design-approval question only when the concept has enough confirmed story direction to present a useful plan for the creator to review.
 - Separate confirmed canon from AI proposals in the wording. Do not imply that a proposal has been accepted.
+- If the creator explicitly rejects an assistant idea, do not repeat it, extend it, or use its distinctive nouns, setting, or mechanism as an affirmative option. Treat rejection-only language as an exclusion and derive alternatives only from the creator's premise and ideas they explicitly approved.
 
-${creatorCanon?`\n${creatorCanon}\n`:''}
+${rejectedProposalCount?'\nRECENT CORRECTION: The creator has rejected the immediately preceding assistant proposal. Do not use it as canon or make new options from it. Continue from the creator\'s actual premise and any approved ideas.\n':''}${creatorCanon?`\n${creatorCanon}\n`:''}
 CANON RULE: Every concrete detail explicitly supplied or approved by the creator is fixed canon. Preserve names, facts, relationships, events, world rules, visual constraints, and preferences exactly. Never replace, reinterpret, or overwrite a creator detail with an AI idea. When revising, change only what the creator requested and retain all other approved details.
 
 Use the attached project settings only as preferences, not as authority to alter the creator's story. Number of scenes requested: ${String(shotCount)}. Current visual style preference: ${String(style)}.${activeDesign?`\n\nCURRENT DESIGN WORKSPACE: Focus on this one asset only while refining it with the creator. Do not restart or summarize the full story, and do not move to another asset unless asked. Preserve explicit canon; expand unspecified design details as labeled visual proposals. Ask one focused question only if a consequential design choice cannot be proposed safely. Current asset: ${JSON.stringify(activeDesign).slice(0,4000)}`:''} Existing reference/asset notes (descriptions only): ${JSON.stringify(assets).slice(0,16000)}${activeDesign?`\n\nIn this focused design conversation, discuss only the active asset and its visual direction. Treat user messages as edits or questions about this asset, preserve accepted details, and keep suggestions separate. Do not ask whether to prepare the full plan and never emit [[LOCALFLOW_STORYBOARD_READY]].`:storyboardProposal?`\n\nCURRENT STORYBOARD REVIEW: Visual development is already approved and the creator is reviewing this proposed storyboard: ${JSON.stringify(storyboardProposal).slice(0,12000)}. Discuss only the creator's requested changes to this scene plan. Preserve all confirmed story and design details. Do not return to asset planning, do not regenerate a new storyboard by yourself, and do not claim approval. After a requested change, summarize the precise change and let the creator decide whether to revise the draft. Do not emit [[LOCALFLOW_STORYBOARD_READY]].`:`\n\nWhen the first-pass concept is mature enough, summarize only confirmed facts and clearly separate optional AI proposals. Ask exactly: “Should I prepare the character and visual asset designs first?” Do not start generation until the creator explicitly agrees. Only after that explicit approval, answer briefly and append the exact token [[LOCALFLOW_STORYBOARD_READY]] at the end. Never emit that token before approval.`}`;
@@ -224,6 +225,14 @@ function creativeChatOptionChoices(text) {
   const yesNoChoices=storyChatYesNoChoices(question);if(yesNoChoices.length)return yesNoChoices;
   const numberedOptions=String(text||'').split(/\r?\n/).map(line=>line.match(/^\s*\d+[.)]\s+(.+)$/)?.[1]?.trim()).filter(Boolean);
   if(numberedOptions.length>=2&&/\b(which|choose|prefer|best captures|ending direction|these endings|these options)\b/i.test(question))return numberedOptions.slice(0,5).map((raw,index)=>{const clean=raw.replace(/[*_`]/g,'').trim();const label=(clean.split(/\s+(?:—|–|-)\s+|:\s+|\.\s+/)[0]||clean).slice(0,56).trim();return {label:label||`Option ${index+1}`,description:clean.slice(0,180),reply:`For this choice, I prefer: ${clean}`};});
+  const eitherOr=question.match(/^(?:(?:is|are)\s+(?:it|this|he|she|they|the (?:story|setting|environment|man|fox))\s+(?:in|set in|located in|a|an|the|still|able to)\s+|(?:would|could)\s+you\s+(?:like|prefer|choose|want|rather)\s+(?:the fox\s+to\s+)?|should\s+(?:it|the setting|the story|the fox|the man)\s+(?:be|become|remain|stay|choose)\s+)([^,?]+?)\s+or\s+([^?]+?)\??$/i);
+  if(eitherOr){
+    return eitherOr.slice(1).map(option=>{
+      const clean=option.trim().replace(/[?.!]+$/,'');
+      const label=clean.charAt(0).toUpperCase()+clean.slice(1);
+      return {label,description:`Choose “${clean}” for this story direction.`,reply:`For this choice, I prefer ${clean}.`};
+    });
+  }
   const match=question.match(/\b([a-z][a-z -]{1,30}),\s*([a-z][a-z -]{1,30}),\s*or\s+([a-z][a-z -]{1,30})\??$/i);
   if(!match)return [];
   return match.slice(1).map((value,index)=>{const option=(index===0?value.replace(/^(?:should|would|could|can)\s+/i,'').replace(/^it\s+(?:be\s+)?/i,'').replace(/^you\s+(?:prefer|choose)\s+/i,'').replace(/^be\s+/i,'').replace(/^which\s+(?:option|aspect|trait)\s*:?\s*/i,'').replace(/^what\s+(?:aspect|trait)\s+(?:should\s+)?(?:be\s+)?/i,'').replace(/^its ability to\s+/i,''):value).trim();const label=option.replace(/\b\w/g,char=>char.toUpperCase());return {label,description:`Choose “${option}” for this story direction.`,reply:`For this part, I prefer ${option}.`};});
@@ -851,9 +860,10 @@ Creator image prompt (preserve its meaning):\n${String(prompt)}`;
         const {baseUrl='http://127.0.0.1:11434',model,messages=[],shotCount=8,style='anime cinematic',assets=[],activeDesign=null,storyboardProposal=null,creatorCanon:providedCreatorCanon='' }=await bodyJson(req);
         if(!model||!Array.isArray(messages)||!messages.some(item=>item.role==='user'))return response(res,400,{error:'Choose a local language model and start the conversation with your story idea.'});
         if(!isLoopbackUrl(baseUrl))return response(res,400,{error:'Story Chat only connects to a local Ollama service.'});
-        const prior=(messages||[]).filter(item=>['user','assistant'].includes(item.role)&&typeof item.content==='string').slice(-20).map(item=>({role:item.role,content:item.content.slice(0,12000)}));
-        const creatorCanon=providedCreatorCanon||buildCreatorCanonContext(messages);
-        const system=buildCreativeChatSystem({shotCount,style,assets,activeDesign,storyboardProposal,creatorCanon});
+        const sanitized=sanitizeRejectedStoryChatMessages(messages),sanitizedMessages=sanitized.messages;
+        const prior=sanitizedMessages.filter(item=>['user','assistant'].includes(item.role)&&typeof item.content==='string').slice(-20).map(item=>({role:item.role,content:item.content.slice(0,12000)}));
+        const creatorCanon=providedCreatorCanon?sanitizeRejectedStoryChatMessages([{role:'user',content:providedCreatorCanon}]).messages[0]?.content||'':buildCreatorCanonContext(sanitizedMessages);
+        const system=buildCreativeChatSystem({shotCount,style,assets,activeDesign,storyboardProposal,creatorCanon,rejectedProposalCount:sanitized.rejectedProposalCount});
         try{
           const upstream=await fetch(baseUrl.replace(/\/$/,'')+'/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model,messages:[{role:'system',content:system},...prior],stream:true,options:{temperature:0.2}}),signal:AbortSignal.timeout(600000)});
           if(!upstream.ok){const detail=await upstream.text();return response(res,502,{error:'Ollama Story Chat failed: '+detail.slice(0,500)});}

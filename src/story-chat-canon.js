@@ -1,4 +1,5 @@
 const CANON_SIGNAL = /\b(?:must(?:\s+not)?|never|do not|don't|does not|doesn't|cannot|can't|without|keep|preserve|remain(?:s)?|not (?:a|an|the|mutual|romantic|romance)|no (?:mutual|romantic|romance|human|new|extra))\b/i;
+const REJECTED_PROPOSAL_SIGNAL = /\b(?:unapproved\s+(?:assistant\s+)?(?:suggestion|proposal|idea)|not\s+(?:story\s+)?canon|not\s+(?:approved|accepted)\s+(?:as\s+)?(?:canon|a?\s*(?:suggestion|proposal|idea))|reject(?:ed|ing)?\s+(?:(?:that|the|your|this|previous|prior)\s+)?(?:assistant\s+)?(?:suggestion|proposal|idea)|(?:discard|ignore)\s+(?:that|the|your|this|previous|prior)\s+(?:assistant\s+)?(?:suggestion|proposal|idea))\b/i;
 
 function boundedMessage(value, limit) {
   const text = String(value || '').replace(/\r\n?/g, '\n').trim();
@@ -9,10 +10,40 @@ function boundedMessage(value, limit) {
 }
 
 export function buildCreatorOnlyBrief(messages) {
-  return (Array.isArray(messages) ? messages : [])
+  return sanitizeRejectedStoryChatMessages(messages).messages
     .filter(message => message?.role === 'user' && typeof message.content === 'string' && message.content.trim())
     .map(message => `Creator: ${message.content.trim()}`)
     .join('\n');
+}
+
+function sanitizeRejectedProposalText(content) {
+  let rejectedClause = false;
+  const clauses = String(content || '').split(/(?<=[.!?;])\s+/);
+  const cleaned = clauses.map(clause => {
+    if (!REJECTED_PROPOSAL_SIGNAL.test(clause)) return clause;
+    rejectedClause = true;
+    return 'A prior assistant turn is excluded from the creative direction.';
+  }).join(' ').replace(/\s{2,}/g, ' ').trim();
+  return { content: cleaned, rejectedClause };
+}
+
+export function sanitizeRejectedStoryChatMessages(messages) {
+  const sanitized = [];
+  let rejectedProposalCount = 0;
+  for (const source of Array.isArray(messages) ? messages : []) {
+    if (!source || !['user', 'assistant'].includes(source.role) || typeof source.content !== 'string') continue;
+    if (source.role === 'user') {
+      const cleaned = sanitizeRejectedProposalText(source.content);
+      if (cleaned.rejectedClause && sanitized.at(-1)?.role === 'assistant') {
+        sanitized.pop();
+        rejectedProposalCount += 1;
+      }
+      sanitized.push({ ...source, content: cleaned.content });
+      continue;
+    }
+    sanitized.push({ ...source });
+  }
+  return { messages: sanitized, rejectedProposalCount };
 }
 
 export function appendCreatorCanonMessage(messages, content) {
@@ -24,7 +55,7 @@ export function appendCreatorCanonMessage(messages, content) {
 }
 
 export function buildCreatorCanonContext(messages, { maxChars = 12000, maxMessageChars = 2400 } = {}) {
-  const turns = (Array.isArray(messages) ? messages : [])
+  const turns = sanitizeRejectedStoryChatMessages(messages).messages
     .filter(message => message?.role === 'user' && typeof message.content === 'string' && message.content.trim())
     .map((message, index) => ({ index, text: boundedMessage(message.content, maxMessageChars), constraint: CANON_SIGNAL.test(message.content) }));
   if (!turns.length) return '';

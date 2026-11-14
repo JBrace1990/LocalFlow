@@ -1,6 +1,41 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { appendCreatorCanonMessage, buildCreatorCanonContext, buildCreatorOnlyBrief } from '../src/story-chat-canon.js';
+import { appendCreatorCanonMessage, buildCreatorCanonContext, buildCreatorOnlyBrief, sanitizeRejectedStoryChatMessages } from '../src/story-chat-canon.js';
+
+test('Story Chat removes an explicitly rejected assistant proposal before the next Ollama turn', () => {
+  const result = sanitizeRejectedStoryChatMessages([
+    { role: 'user', content: 'An injured fox is cared for by a man; she falls in love and wishes to become human.' },
+    { role: 'assistant', content: 'Proposal: a magical barrier prevents her from transforming.' },
+    { role: 'user', content: 'Treat the barrier as one unapproved suggestion, not story canon. Give three challenges that preserve my premise.' },
+  ]);
+
+  assert.equal(result.rejectedProposalCount, 1);
+  assert.equal(result.messages.some(message => message.role === 'assistant' && /magical barrier/i.test(message.content)), false);
+  assert.match(result.messages.at(-1).content, /prior assistant turn is excluded/i);
+  assert.doesNotMatch(result.messages.at(-1).content, /magical barrier/i);
+});
+
+test('Story Chat preserves the useful request while removing the rejected detail from canon', () => {
+  const canon = buildCreatorCanonContext([
+    { role: 'user', content: 'An injured fox is cared for by a man; she falls in love and wishes to become human.' },
+    { role: 'user', content: 'Treat the magical barrier as one unapproved suggestion, not story canon. Please give me three concrete challenge options that preserve my original premise, keep each short, and do not decide which one we use.' },
+  ]);
+
+  assert.match(canon, /three concrete challenge options/);
+  assert.match(canon, /preserve my original premise/);
+  assert.doesNotMatch(canon, /magical barrier/i);
+});
+
+test('Story Chat keeps an assistant proposal when the creator accepts it', () => {
+  const result = sanitizeRejectedStoryChatMessages([
+    { role: 'user', content: 'An injured fox wishes to become human.' },
+    { role: 'assistant', content: 'Proposal: she must earn a wish at a shrine.' },
+    { role: 'user', content: 'I accept the shrine wish as the central challenge.' },
+  ]);
+
+  assert.equal(result.rejectedProposalCount, 0);
+  assert.equal(result.messages[1].content, 'Proposal: she must earn a wish at a shrine.');
+});
 
 test('creator canon history retains original instructions independently of the rolling transcript', () => {
   let canonHistory = appendCreatorCanonMessage([], 'The fox is injured, and the man cares for her.');
