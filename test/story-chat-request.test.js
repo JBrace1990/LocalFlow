@@ -12,9 +12,11 @@ test('Story Chat request carries the configured scene count and current design c
     assets: [{ id: 'fox', name: 'Red fox', category: 'Character' }],
     activeDesign: { id: 'fox', name: 'Red fox', category: 'Character' },
     storyboardProposal: null,
+    creatorCanon: 'AUTHORITATIVE: the ending remains unresolved.',
   });
 
   assert.equal(payload.shotCount, 10);
   assert.equal(payload.activeDesign.id, 'fox');
   assert.equal(payload.model, 'qwen2.5:7b');
+  assert.match(payload.creatorCanon, /ending remains unresolved/);
 });

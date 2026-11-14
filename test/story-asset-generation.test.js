@@ -29,7 +29,7 @@ test('Story Chat submits the selected reference-capable model for design generat
 });
 
 test('asset development receives authoritative creator canon and includes it in the model prompt', () => {
-  assert.match(main, /creatorCanon:buildCreatorCanonContext\(storyChatMessages\)/);
+  assert.match(main, /creatorCanon:buildCreatorCanonContext\(storyChatCanonMessages\)/);
   assert.match(server, /creatorCanon=''/);
   assert.match(server, /Authoritative creator canon:[^+]*\+String\(creatorCanon\)/);
 });

@@ -15,6 +15,14 @@ export function buildCreatorOnlyBrief(messages) {
     .join('\n');
 }
 
+export function appendCreatorCanonMessage(messages, content) {
+  const history = (Array.isArray(messages) ? messages : [])
+    .filter(message => message?.role === 'user' && typeof message.content === 'string' && message.content.trim())
+    .map(message => ({ role: 'user', content: message.content.trim() }));
+  const text = String(content || '').trim();
+  return text ? [...history, { role: 'user', content: text }] : history;
+}
+
 export function buildCreatorCanonContext(messages, { maxChars = 12000, maxMessageChars = 2400 } = {}) {
   const turns = (Array.isArray(messages) ? messages : [])
     .filter(message => message?.role === 'user' && typeof message.content === 'string' && message.content.trim())

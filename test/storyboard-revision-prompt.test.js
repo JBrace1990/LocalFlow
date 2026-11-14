@@ -8,10 +8,14 @@ const mainSource = await readFile(new URL('../src/main.jsx', import.meta.url), '
 const serverSource = await readFile(new URL('../server.js', import.meta.url), 'utf8');
 
 test('storyboard generation and scene revisions carry durable creator canon separately from assistant suggestions', () => {
-  assert.match(mainSource, /creatorCanon:buildCreatorCanonContext\(conversation\),existingScenes/);
+  assert.match(mainSource, /creatorCanon:buildCreatorCanonContext\(creatorCanonMessages\),existingScenes/);
   assert.match(serverSource, /creatorCanon='',existingScenes=\[\]/);
   assert.match(serverSource, /Authoritative creator canon:/);
   assert.match(serverSource, /String\(creatorCanon\)\.slice\(0,12000\)/);
+});
+
+test('Studio storyboard generation also sends the durable creator canon ledger', () => {
+  assert.match(mainSource, /apiPost\('\/api\/storyboard',\{model,brief,shotCount,style,targetDurationSeconds:workflowProject\?\.targetDurationSeconds\|\|90,creatorCanon:buildCreatorCanonContext\(storyChatCanonMessages\),assets:/);
 });
 
 test('a full replacement uses creator-authored canon and excludes the rejected storyboard', () => {

@@ -7,10 +7,10 @@ const source = await readFile(fileURLToPath(new URL('../src/main.jsx', import.me
 const server = await readFile(fileURLToPath(new URL('../server.js', import.meta.url)), 'utf8');
 
 test('Storyboard Chat edits revise the side plan from the current conversation', () => {
-  assert.match(source, /const reviseStoryboardDraft=async\(conversation=storyChatMessages\)/);
+  assert.match(source, /const reviseStoryboardDraft=async\(conversation=storyChatMessages,creatorCanonMessages=storyChatCanonMessages\)/);
   assert.match(source, /recentConversation=conversation\.slice\(-12\)\.map\(message=>/);
   assert.match(source, /message\.role==='user'\?'Creator':'Assistant'/);
-  assert.match(source, /await reviseStoryboardDraft\(\[\.\.\.messages,\{role:'assistant',content:cleanContent\}\]\)/);
+  assert.match(source, /await reviseStoryboardDraft\(\[\.\.\.messages,\{role:'assistant',content:cleanContent\}\],creatorCanonMessages\)/);
 });
 
 test('completed storyboard plans stay editable from Story Chat and are sent as revision context', () => {
@@ -22,7 +22,7 @@ test('completed storyboard plans stay editable from Story Chat and are sent as r
   assert.match(source, /scenes:planForRevision\.scenes,status:'storyboard-review'/);
   assert.match(server, /options:\{num_predict:numPredict\}/);
   assert.match(server, /mergeStoryboardSceneRevision\(existingScenes,revisionSceneIndex,revised\.scene\)/);
-  assert.match(source, /creatorInstruction:latestCreatorInstruction,creatorCanon:buildCreatorCanonContext\(conversation\),existingScenes:planForRevision\.scenes/);
+  assert.match(source, /creatorInstruction:latestCreatorInstruction,creatorCanon:buildCreatorCanonContext\(creatorCanonMessages\),existingScenes:planForRevision\.scenes/);
   assert.equal((source.match(/onClick=\{\(\)=>onReviseStoryboard\(\)\}/g) || []).length, 2);
   assert.doesNotMatch(source, /onClick=\{onReviseStoryboard\}/);
 });

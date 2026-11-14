@@ -46,7 +46,8 @@ test('Story Chat injects every creator-authored turn as durable canon alongside 
 
   assert.match(system, /Do not make the love mutual or turn them into a couple\./);
   assert.match(system, /A later creator statement overrides earlier canon only when it clearly changes it/);
-  assert.match(source, /creatorCanon=buildCreatorCanonContext\(messages\)/);
+  assert.match(source, /creatorCanon=providedCreatorCanon\|\|buildCreatorCanonContext\(messages\)/);
+  assert.match(uiSource, /creatorCanon:buildCreatorCanonContext\(creatorCanonMessages\)/);
 });
 
 test('visual-development planning builds its brief from creator turns only', () => {
@@ -54,9 +55,19 @@ test('visual-development planning builds its brief from creator turns only', () 
   const end = uiSource.indexOf('const reviseStoryboardDraft=async', start);
   assert.ok(start >= 0 && end > start, 'visual-development plan request should remain available');
   const handler = uiSource.slice(start, end);
-  assert.match(handler, /buildCreatorOnlyBrief\(conversation\)/);
-  assert.match(handler, /creatorMessages=conversation\.filter\(message=>message\?\.role==='user'/);
+  assert.match(handler, /buildCreatorOnlyBrief\(creatorCanonMessages\)/);
+  assert.match(handler, /creatorMessages=creatorCanonMessages\.filter\(message=>message\?\.role==='user'/);
+  assert.match(handler, /const creatorCanon=buildCreatorCanonContext\(creatorCanonMessages\)/);
+  assert.match(handler, /creatorMessages,creatorCanon/);
   assert.doesNotMatch(handler, /conversation\.map\(message=>`\$\{message\.role==='user'\?'Creator':'Assistant'/);
+});
+
+test('storyboard revision fallback keeps the latest creator canon when planning assets', () => {
+  const start = uiSource.indexOf('const reviseStoryboardDraft=async');
+  const end = uiSource.indexOf('const proposeStoryboardForApproval=async', start);
+  assert.ok(start >= 0 && end > start, 'storyboard revision handler should remain available');
+  const handler = uiSource.slice(start, end);
+  assert.match(handler, /startStoryFromChat\(conversation,creatorCanonMessages\)/);
 });
 
 test('visual-development API retries and rejects plans that contradict creator canon', () => {

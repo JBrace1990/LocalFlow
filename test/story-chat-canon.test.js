@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCreatorCanonContext, buildCreatorOnlyBrief } from '../src/story-chat-canon.js';
+import { appendCreatorCanonMessage, buildCreatorCanonContext, buildCreatorOnlyBrief } from '../src/story-chat-canon.js';
+
+test('creator canon history retains original instructions independently of the rolling transcript', () => {
+  let canonHistory = appendCreatorCanonMessage([], 'The fox is injured, and the man cares for her.');
+  for (let index = 0; index < 70; index += 1) {
+    canonHistory = appendCreatorCanonMessage(canonHistory, `Creator refinement ${index}.`);
+  }
+
+  const context = buildCreatorCanonContext(canonHistory);
+  assert.match(context, /The fox is injured, and the man cares for her\./);
+  assert.match(context, /Creator refinement 69\./);
+  assert.equal(canonHistory.length, 71);
+});
 
 test('visual-development input excludes unapproved assistant suggestions from the plan brief', () => {
   const brief = buildCreatorOnlyBrief([
