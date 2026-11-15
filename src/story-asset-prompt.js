@@ -37,7 +37,7 @@ export function buildArtDirectionAssetPrompt({
   const palette = brief.match(/(?:fixed\s+)?palette\s*:\s*([^\.\n]+)/i)?.[1]?.trim();
   const safeProjectStyle = projectStyle
     .split(/[\n.]+/)
-    .filter(sentence => !/\b(?:character|people|acting|storytelling|protagonist|cast)\b/i.test(sentence))
+    .filter(sentence => !/\b(?:character|people|acting|storytelling|protagonist|cast|painterly background|natural material|readable silhouette|cinematic|landscape|location|interior|exterior|scene)\b/i.test(sentence))
     .join('. ')
     .trim();
 
@@ -47,6 +47,6 @@ export function buildArtDirectionAssetPrompt({
     palette ? `Creator's fixed palette: ${palette}.` : '',
     style ? `Rendering medium and technique: ${style}.` : '',
     safeProjectStyle ? `Project-wide art direction: ${safeProjectStyle}.` : '',
-    'Show only the environment, light, rendering, and color relationships needed to communicate the style. No people, characters, animals, clothing, vehicles, or props. Do not include linked asset identities, character-framing instructions, character sheets, turnarounds, or storyboard action.',
+    'Show color chips and abstract rendering marks only, with hand-inked line samples and a simple cel-shading light gradient. No environment, people, characters, animals, clothing, vehicles, or props. Do not include linked asset identities, character-framing instructions, character sheets, turnarounds, recognizable locations, or storyboard action.',
   ].filter(Boolean).join(' ');
 }

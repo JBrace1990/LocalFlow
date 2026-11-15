@@ -38,12 +38,29 @@ export function createProjectDraft(name, durationSeconds = 90, id = `project-${D
 }
 
 export function assetDesignModelsFor(models = []) {
-  return models.filter(model =>
+  const compatible = models.filter(model =>
     model?.type === 'Image' &&
     model?.vendor !== 'MiniMax' &&
     Number(model.maxReferences) > 0 &&
     !/image[- ]?edit/i.test(`${model.id || ''} ${model.name || ''}`)
   );
+  const readinessScore = model => {
+    const state = String(model.state || '').toLowerCase();
+    return (['downloaded', 'ready'].includes(state) ? 8 : 0) +
+      (model.ready === true ? 4 : 0) +
+      (model.filesReady === true ? 3 : 0) +
+      (model.supported === true || model.comfySupported === true ? 2 : 0) +
+      (model.referenceMode ? 1 : 0) -
+      (/unavailable|failed/.test(state) ? 12 : 0) -
+      (/required|update/.test(state) ? 8 : 0) -
+      (model.supported === false || model.comfySupported === false ? 6 : 0);
+  };
+  const unique = new Map();
+  for (const model of compatible) {
+    const existing = unique.get(model.id);
+    if (!existing || readinessScore(model) > readinessScore(existing)) unique.set(model.id, model);
+  }
+  return [...unique.values()];
 }
 
 export function videoModelSupportsSourceMode(model, sourceMode = 'storyboard') {

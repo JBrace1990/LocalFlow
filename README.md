@@ -119,7 +119,7 @@ A release build may require Windows build tools and internet access for dependen
 | **ComfyUI** | Image and video workflows | Run locally and select compatible workflows and model files. Local Flow can start a configured installation in the background. |
 | **Ollama** | Story Chat and storyboard planning | Install Ollama and download a language model separately. |
 | **Kokoro** | Text-to-speech | Runs inside Local Flow. The selected voice model is downloaded separately and can be prepared from Settings. |
-| **Local sound endpoint** | Sound effects | Configure a loopback OpenAI-compatible audio generation service in Settings. |
+| **ComfyUI + Stable Audio Open** | Sound effects | ComfyUI's native audio workflow; download the model files from Settings → Audio & Sound. |
 | **MiniMax APIs** | Hosted image/video models | Require API credentials. Hosted requests may incur charges. |
 
 Model weights are not bundled. Use **Settings → Models** to discover model folders and manage supported downloads. ComfyUI workflow compatibility determines whether a model can be used for a particular task; custom API-format workflows can be configured in Settings.
@@ -153,7 +153,8 @@ Back up project data and media separately from model weights. If you change the 
 
 ### Audio generation is unavailable
 
-- Kokoro speech and sound-effect generation use separate paths. Configure the sound service in **Settings → Audio & Sound** if you use an external local endpoint.
+- Kokoro speech and sound effects use separate paths. Sound effects run through ComfyUI with Stable Audio Open; Settings → Audio & Sound shows node readiness and downloads the external model files.
+- Stable Audio Open weights use the Stability AI Community License. Review the model terms before commercial use.
 
 ## Contributing
 

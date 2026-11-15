@@ -1,0 +1,21 @@
+.comfy-audio-settings{display:grid;gap:10px;color:var(--text,#f3f2ed)}
+.comfy-audio-settings .settings-section-title{display:flex;align-items:center;gap:10px}
+.comfy-audio-settings .settings-section-title>div:nth-child(2){flex:1;min-width:0}
+.comfy-audio-model-card{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.comfy-audio-model-copy{display:grid;gap:4px;min-width:0}
+.comfy-audio-model-copy>b{font-size:12px}
+.comfy-audio-model-copy>small{color:var(--muted);font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+.comfy-audio-model-card>strong{font-size:10px;font-weight:600;color:var(--soft);text-align:right}
+.comfy-audio-file-list{display:grid;gap:5px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:color-mix(in srgb,var(--panel2) 55%,transparent)}
+.comfy-audio-file-list>div{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:21px;font-size:10px}
+.comfy-audio-file-list>div>small{color:var(--muted);font-size:9px;text-align:right}
+.comfy-audio-download-button{justify-self:start;min-width:245px}
+.comfy-audio-download-progress{display:grid;gap:7px;padding:10px 11px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
+.comfy-audio-progress-track{height:5px;overflow:hidden;border-radius:5px;background:var(--bg)}
+.comfy-audio-progress-track>span{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .25s ease}
+.comfy-audio-download-progress>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:9px}
+.comfy-audio-download-progress b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:550}
+.comfy-audio-download-progress small{flex:none;color:var(--muted);font-size:9px}
+.comfy-audio-settings .connection-help{margin:0;color:var(--muted);font-size:10px;line-height:1.5}
+.comfy-audio-settings .connection-help a{color:var(--accent)}
+@media(max-width:760px){.comfy-audio-file-list>div{grid-template-columns:8px minmax(0,1fr)}.comfy-audio-file-list>div>small{grid-column:2;text-align:left}.comfy-audio-download-progress>div:last-child{align-items:flex-start;flex-direction:column}}

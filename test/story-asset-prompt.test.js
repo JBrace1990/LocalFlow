@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { buildArtDirectionAssetPrompt, buildVisualAssetPrompt } from '../src/story-asset-prompt.js';
+import { assetViewGuidance } from '../src/asset-view-guidance.js';
 
 const main = await readFile(new URL('../src/main.jsx', import.meta.url), 'utf8');
 
@@ -10,7 +11,7 @@ test('art-direction generation cannot inherit linked character sheets or charact
     name: 'Modern Japanese Anime Art Direction',
     description: 'Modern Japanese anime with refined character silhouettes and emotional but restrained acting. Fixed palette: indigo, russet, cream, and amber.',
     visualStyle: 'Hand-drawn 2D anime, restrained cel shading.',
-    projectArtDirection: 'Consistent modern Japanese anime, warm interiors and cool night exteriors.',
+    projectArtDirection: 'Consistent modern Japanese anime, painterly backgrounds, natural materials, readable silhouettes, cinematic 16:9 compositions.',
     designExpansion: 'Frame the Kind Man and the Fox from their upper bodies.',
     linkedDesignNotes: 'Kind Man character sheet; Fox character turnaround.',
   });
@@ -20,6 +21,8 @@ test('art-direction generation cannot inherit linked character sheets or charact
   assert.match(prompt, /exactly six large, separate, unlabeled color swatches/i);
   assert.match(prompt, /two small abstract rendering samples/i);
   assert.match(prompt, /No people, faces, animals, characters, clothing, vehicles, buildings, props/i);
+  assert.doesNotMatch(prompt, /painterly backgrounds|readable silhouettes|cinematic 16:9 compositions|natural materials/i);
+  assert.match(prompt, /color chips and abstract rendering marks only/i);
   assert.match(prompt, /indigo, russet, cream, and amber/i);
   assert.doesNotMatch(prompt, /character silhouettes|character development|emotional but restrained acting/i);
   assert.doesNotMatch(prompt, /Kind Man|Fox character turnaround|upper bod/i);
@@ -43,6 +46,13 @@ test('a character design prompt does not list other cast members as negative ide
   assert.match(prompt, /show exactly one character/i);
   assert.match(main, /buildVisualAssetPrompt\(\{name:asset\.name,category,/);
   assert.doesNotMatch(main, /CAST IDENTITY SEPARATION/);
+});
+
+test('a nonhuman fox character reference preserves four-legged animal anatomy', () => {
+  const guidance = assetViewGuidance('Character', 'Yuki in fox form: one small adult red fox, natural four-legged anatomy.');
+  assert.match(guidance, /natural four-legged animal anatomy/i);
+  assert.match(guidance, /all four paws on the ground/i);
+  assert.doesNotMatch(guidance, /standing pose|head-to-toe/i);
 });
 
 test('a location background prompt excludes character-focused expansions and linked cast notes', () => {

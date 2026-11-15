@@ -46,6 +46,20 @@ test('asset design model choices exclude API-only, unsupported, and edit-only mo
   assert.deepEqual(assetDesignModelsFor(models).map(model => model.id), ['animagine']);
 });
 
+test('asset design model choices deduplicate IDs and keep the ready reference workflow', () => {
+  const models = [
+    { id: 'animagine', type: 'Image', vendor: 'Local ComfyUI', maxReferences: 8, state: 'ComfyUI update required', supported: false },
+    { id: 'animagine', type: 'Image', vendor: 'Local ComfyUI', maxReferences: 8, referenceMode: 'ipadapter', state: 'Downloaded', supported: true, filesReady: true },
+    { id: 'qwen', type: 'Image', vendor: 'Local ComfyUI', maxReferences: 16, state: 'Downloaded' },
+    { id: 'qwen', type: 'Image', vendor: 'Local ComfyUI', maxReferences: 16, state: 'Download required' },
+  ];
+  const choices = assetDesignModelsFor(models);
+  assert.deepEqual(choices.map(model => model.id), ['animagine', 'qwen']);
+  assert.equal(choices[0].referenceMode, 'ipadapter');
+  assert.equal(choices[0].state, 'Downloaded');
+  assert.equal(choices[1].state, 'Downloaded');
+});
+
 test('Wan 2.2 is available for storyboard image-to-video but not text-to-video', () => {
   assert.equal(videoModelSupportsSourceMode({ id: 'comfy-wan22-i2v' }, 'storyboard'), true);
   assert.equal(videoModelSupportsSourceMode({ id: 'comfy-wan22-i2v' }, 'image'), true);

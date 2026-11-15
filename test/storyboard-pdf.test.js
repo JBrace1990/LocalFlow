@@ -3,7 +3,11 @@ import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { renderStoryboardPdf, writeStoryboardPdf } from '../src/storyboard-pdf.js';
+import { renderStoryboardPdf, storyboardTextYAfterImage, writeStoryboardPdf } from '../src/storyboard-pdf.js';
+
+test('storyboard description starts below the full fitted keyframe area', () => {
+  assert.equal(storyboardTextYAfterImage(230, 360, 14), 604);
+});
 
 test('storyboard PDF contains pages and embeds selected keyframes', async () => {
   let requestedImage = '';

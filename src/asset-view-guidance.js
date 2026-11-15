@@ -1,5 +1,10 @@
 export function assetViewGuidance(category, description = '') {
   if (/character/i.test(category || '')) {
+    const characterBrief = String(description || '');
+    const nonhumanAnimal = /\b(?:fox|wolf|dog|cat|animal|quadruped)\b/i.test(characterBrief) && !/\b(?:anthropomorphic|humanoid|human form|two-legged|bipedal)\b/i.test(characterBrief);
+    if (nonhumanAnimal) {
+      return 'Create one canonical full-body animal character design reference. Preserve natural four-legged animal anatomy and proportions; show the animal on all four paws on the ground in a relaxed natural fox-like pose, with the entire body and tail visible. Center it against a plain warm-white background. This is a clean animal design portrait, not a scene illustration. Do not make it anthropomorphic or upright; no human torso, hands, clothing, or standing on hind legs unless the creator explicitly requests those traits. Preserve the specified markings and identity while applying the project art style. No scenery, extra animals, duplicate bodies, inset portraits, multiple views, panels, labels, captions, logos, or readable text.';
+    }
     return 'Create one canonical full-body character design reference: show exactly one character, matching the creator-specified age and appearance. If age is not specified, do not impose a specific age; use a role-appropriate neutral presentation. Show the character head-to-toe in a relaxed neutral standing pose, centered against a plain warm-white background. Show one face and one body only. This is a clean asset portrait for continuity, not a scene illustration or a multi-view turnaround. Preserve the character identity and design details while applying the project art style. No cockpit, scenery, extra people, duplicate bodies, inset portraits, multiple views, panels, labels, captions, logos, or readable text.';
   }
   if (/vehicle|ship/i.test(category || '')) {

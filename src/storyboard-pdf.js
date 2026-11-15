@@ -4,6 +4,7 @@ import PDFDocument from 'pdfkit';
 import { parseExportOutputPath } from './timeline-export.js';
 
 const text = value => String(value ?? '');
+export const storyboardTextYAfterImage = (imageTop, imageHeight = 360, gap = 14) => imageTop + imageHeight + gap;
 
 export async function renderStoryboardPdf(project, { imageForScene = async () => null, exportedOn = new Date().toLocaleDateString() } = {}) {
   const shots = Array.isArray(project?.shots) ? project.shots : [];
@@ -38,7 +39,11 @@ export async function renderStoryboardPdf(project, { imageForScene = async () =>
       try {
         const image = await imageForScene(scene.image, scene);
         if (image?.length) {
+          const imageTop = doc.y;
           doc.image(image, { fit: [pageWidth, 360], align: 'center', valign: 'center' });
+          // PDFKit draws the fitted image but does not advance the text cursor
+          // past its full box. Move it explicitly so scene text cannot overlap.
+          doc.y = storyboardTextYAfterImage(imageTop);
           embedded = true;
         }
       } catch {}
@@ -47,7 +52,7 @@ export async function renderStoryboardPdf(project, { imageForScene = async () =>
       doc.save().rect(doc.x, doc.y, pageWidth, 110).fill('#f0f2f5').restore();
       doc.font('Helvetica').fontSize(11).fillColor('#727987').text(scene.image ? 'Keyframe could not be loaded' : 'No keyframe selected', doc.x, doc.y + 46, { width: pageWidth, align: 'center' });
       doc.y += 126;
-    } else doc.moveDown(0.9);
+    }
 
     if (scene.description) {
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#172033').text('Scene description');
