@@ -11,3 +11,9 @@ test('the application top bar does not show a personal profile avatar', () => {
   assert.match(topbar, /className="top-avatar"/, 'the assertion should target the existing placeholder');
   assert.match(css, /\.app-shell\s+\.topbar\s+\.top-avatar\s*\{[^}]*display:\s*none/s);
 });
+
+test('the sidebar brand uses the LocalFlow product name without a LOCAL badge', () => {
+  const brand = app.match(/<button className="brand brand-home"[\s\S]*?<\/button>/)?.[0] || '';
+  assert.match(brand, /<span>LocalFlow<\/span>/);
+  assert.doesNotMatch(brand, /local-pill|>LOCAL</);
+});
