@@ -1,6 +1,6 @@
 {
   "name": "local-flow",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "description": "Local-first storyboard, AI media generation, and multitrack video editing studio",
   "author": "Local Flow contributors",
   "private": false,

@@ -4,9 +4,12 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const http = require('node:http');
 const net = require('node:net');
+const { createStartupHtml, createStartupUpdateScript } = require('./startup-screen.cjs');
 
 let serverProcess;
 let mainWindow;
+let startupWindow;
+let startupRendererReady;
 let apiPort = 4180;
 let finishingQuit = false;
 const defaultUserDataPath=app.getPath('userData');
@@ -53,15 +56,50 @@ async function selectPort() {
   throw new Error('Could not find a free local API port.');
 }
 
+function showStartupStatus(step, title, detail) {
+  if (!startupWindow || startupWindow.isDestroyed()) return;
+  const update = () => startupWindow?.webContents.executeJavaScript(createStartupUpdateScript(step, title, detail)).catch(() => {});
+  if (startupRendererReady) startupRendererReady.then(update).catch(() => {});
+  else update();
+}
+
+function createStartupWindow() {
+  if (startupWindow && !startupWindow.isDestroyed()) return;
+  startupWindow = new BrowserWindow({
+    width: 520,
+    height: 420,
+    minWidth: 520,
+    maxWidth: 520,
+    minHeight: 420,
+    maxHeight: 420,
+    center: true,
+    frame: false,
+    resizable: false,
+    show: true,
+    title: 'Starting LocalFlow',
+    backgroundColor: '#10131a',
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  startupRendererReady = startupWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(createStartupHtml())}`);
+  startupWindow.on('closed', () => { startupWindow = null; startupRendererReady = null; });
+}
+
 async function startApi() {
+  showStartupStatus(0, 'Preparing your workspace', 'Checking your local projects and media…');
   await migrateUserData();
+  showStartupStatus(0, 'Checking LocalFlow services', 'Looking for an existing local API…');
   apiPort=await selectPort();
   try { const ready=await request(apiPort,'/api/health');if(ready.status===200)return; } catch {}
+  showStartupStatus(1, 'Starting the local API', 'Launching LocalFlow’s workspace and generation services…');
   const serverPath=path.join(app.getAppPath(),'server.js');
   serverProcess=spawn(process.execPath,[serverPath],{env:{...process.env,ELECTRON_RUN_AS_NODE:'1',LOCAL_FLOW_PORT:String(apiPort),LOCAL_FLOW_DATA_DIR:dataDir},windowsHide:true,stdio:'ignore'});
   serverProcess.on('error',error=>dialog.showErrorBox('Local Flow could not start',error.message));
   const deadline=Date.now()+30000;
-  while(Date.now()<deadline){try{const r=await request(apiPort,'/api/health');if(r.status===200)return;}catch{}await new Promise(resolve=>setTimeout(resolve,250));}
+  while(Date.now()<deadline){
+    showStartupStatus(1, 'Starting the local API', 'Waiting for the local workspace to become ready…');
+    try{const r=await request(apiPort,'/api/health');if(r.status===200)return;}catch{}
+    await new Promise(resolve=>setTimeout(resolve,500));
+  }
   throw new Error('Local Flow API did not start. Check that the installed application files are intact.');
 }
 
@@ -70,9 +108,12 @@ async function createWindow() {
   // The API starts enabled local services as soon as it listens. Do not make
   // window creation wait on ComfyUI/Ollama startup; generation routes will
   // reuse those services and the dependency panel reports their live state.
-  mainWindow=new BrowserWindow({width:1500,height:960,minWidth:1080,minHeight:700,backgroundColor:'#111210',title:'Local Flow',autoHideMenuBar:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  showStartupStatus(2, 'Opening your studio', 'Loading your projects and preparing the workspace…');
+  mainWindow=new BrowserWindow({width:1500,height:960,minWidth:1080,minHeight:700,backgroundColor:'#111210',title:'Local Flow',autoHideMenuBar:true,show:false,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
   await mainWindow.loadURL(`http://127.0.0.1:${apiPort}/`);
   mainWindow.webContents.setWindowOpenHandler(({url})=>{shell.openExternal(url);return {action:'deny'};});
+  mainWindow.show();
+  if(startupWindow&&!startupWindow.isDestroyed())startupWindow.close();
   mainWindow.on('closed',()=>{mainWindow=null;});
 }
 
@@ -80,8 +121,8 @@ const hasSingleInstanceLock=app.requestSingleInstanceLock();
 if(!hasSingleInstanceLock)app.quit();
 else {
   app.on('second-instance',()=>{if(!mainWindow)return;if(mainWindow.isMinimized())mainWindow.restore();mainWindow.show();mainWindow.focus();});
-  app.whenReady().then(createWindow).catch(error=>{dialog.showErrorBox('Local Flow startup failed',error.stack||error.message);app.quit();});
+  app.whenReady().then(()=>{createStartupWindow();return createWindow();}).catch(error=>{showStartupStatus(1,'LocalFlow could not start',error.message);dialog.showErrorBox('Local Flow startup failed',error.stack||error.message);app.quit();});
 }
-app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow().catch(error=>dialog.showErrorBox('Local Flow startup failed',error.message));});
+app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0){createStartupWindow();createWindow().catch(error=>dialog.showErrorBox('Local Flow startup failed',error.message));}});
 app.on('before-quit',(event)=>{if(serverProcess&&!serverProcess.killed&&!finishingQuit){event.preventDefault();finishingQuit=true;request(apiPort,'/api/shutdown','POST').catch(()=>{}).finally(()=>{const child=serverProcess;serverProcess=null;if(child&&!child.killed)child.kill();app.quit();});}});
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit();});
