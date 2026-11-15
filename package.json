@@ -1,0 +1,92 @@
+{
+  "name": "local-flow",
+  "version": "0.4.9",
+  "description": "Local-first storyboard, AI media generation, and multitrack video editing studio",
+  "author": "Local Flow contributors",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n API,UI \"node --watch server.js\" \"vite --host 127.0.0.1\"",
+    "dev:local": "concurrently -k -n API,UI \"node --watch server.js\" \"vite --host 127.0.0.1\"",
+    "server": "node server.js",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "desktop": "electron .",
+    "release:windows": "npm run build && electron-builder --win nsis",
+    "release:portable": "npm run build && electron-builder --win portable --x64"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
+    "ffmpeg-static": "^5.3.0",
+    "jszip": "^3.10.2",
+    "kokoro-js": "^1.2.1",
+    "lucide-react": "^0.468.0",
+    "pdfkit": "^0.20.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^10.0.7",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12",
+    "vite": "^6.0.5"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.localflow.studio",
+    "productName": "Local Flow",
+    "electronDist": "node_modules/electron/dist",
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/ffmpeg.exe",
+      "node_modules/onnxruntime-node/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "runtime/comfyui-background.py",
+        "to": "runtime/comfyui-background.py"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "server.js",
+      "electron/**/*",
+      "THIRD-PARTY-NOTICES.md",
+      "package.json",
+      "node_modules/**/*",
+      "tts-engine.js"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Local-Flow-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Local-Flow-Portable-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "electron@35.7.5": true,
+    "electron-winstaller@5.4.0": true
+  }
+}
