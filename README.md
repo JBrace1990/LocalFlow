@@ -1,56 +1,172 @@
 # Local Flow
 
-A local-first storyboard and AI studio for planning scenes, attaching keyframes, generating image-to-video clips, and keeping media in a chosen folder.
+**A local-first studio for developing stories, designing visual assets, building storyboards, and producing short videos.**
 
+Local Flow brings story planning, image and video generation, audio, and timeline editing into one Windows desktop app. It connects to local creative runtimes such as ComfyUI and Ollama, while keeping model weights separate from the installer.
 
-## Portable Windows build
+> **Project status:** Pre-release. Local generation depends on the selected workflow, installed models, ComfyUI nodes, and available hardware. Some provider integrations require their own setup or API credentials.
 
-Use `Local-Flow-Portable-<version>.exe` for a no-install copy. The portable EXE stores settings, projects, local API data, and generated media in a `Local Flow Data` folder next to the EXE so the app can be moved as a folder. Keep that data folder with the EXE when moving or backing up the portable copy. Model weights remain separate and are selected in the app.
+[![Windows](https://img.shields.io/badge/platform-Windows-2563eb?logo=windows)](https://github.com/JBrace1990/LocalFlow)
+[![Electron](https://img.shields.io/badge/desktop-Electron-47848f?logo=electron)](https://www.electronjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933?logo=nodedotjs)](https://nodejs.org/)
+[![Build](https://github.com/JBrace1990/LocalFlow/actions/workflows/windows-installer.yml/badge.svg)](https://github.com/JBrace1990/LocalFlow/actions/workflows/windows-installer.yml)
 
-## Install on Windows
+## Contents
 
-1. Download `Local-Flow-Setup-<version>.exe` from the latest GitHub Release.
-2. Run the installer. It installs Local Flow per-user and creates Start Menu and Desktop shortcuts.
-3. Open Local Flow. The native Electron app starts its local API automatically.
+- [What you can do](#what-you-can-do)
+- [How the workflow fits together](#how-the-workflow-fits-together)
+- [Install the Windows app](#install-the-windows-app)
+- [Run from source](#run-from-source)
+- [Local services and models](#local-services-and-models)
+- [Where files are stored](#where-files-are-stored)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-The Windows installer includes Electron/Node, FFmpeg, and the Kokoro JavaScript speech engine. Local Flow detects and starts installed ComfyUI and Ollama quietly in the background by default, reusing them if already running; either startup can be disabled in Settings. If Ollama is missing, use its in-app Install action. ComfyUI and Python/CUDA runtimes must be installed once because they depend on the PC's GPU and driver. Studio generation can start the detected ComfyUI backend itself; it does not require a successful connection check first. Auto-detected ComfyUI Desktop installs reuse Desktop's model paths, while Local Flow keeps ComfyUI input and output files in its own writable data folder. The managed backend launches with `--disable-pinned-memory` to avoid a Windows model-staging issue. If detection misses an install, enter its executable and arguments in Settings. Text-to-speech uses Kokoro inside Local Flow by default; its weights download and prepare in the background on app startup, then stay in Local Flow's user data folder. Disable background preparation to download on first use instead. An OpenAI-compatible local TTS service can be selected instead. Sound generation supports configurable local service endpoints.
+## What you can do
 
-AI model weights are never bundled with the installer. Use the Models UI to discover local weights, select model folders, or search/download model files from Hugging Face. Ollama manages its own language model downloads. The installer does not download models; Local Flow downloads the optional Kokoro voice model in the app after first launch.
+- **Develop a story with Story Chat.** Shape a premise and direction through a guided conversation before moving into visual production.
+- **Create reusable visual assets.** Build characters, locations, uniforms, props, and art direction, with reference images and continuity notes.
+- **Plan scenes in Studio.** Edit scene names, prompts, duration, aspect ratio, and resolution. Keep reference frames separate from generated variants.
+- **Generate and review images.** Queue multiple outputs, keep or reject variants, and select a keyframe for each scene.
+- **Create video clips.** Generate clips from text or storyboard keyframes, then review them in the context of their scenes.
+- **Build the soundtrack.** Generate speech locally with Kokoro, manage project audio, and arrange sound and clips on a multitrack timeline.
+- **Edit and export.** Scrub, trim, split, position, and mix media, then export a video with FFmpeg.
+- **Keep project media organized.** Browse generated and imported media, and recover deleted projects and assets from trash.
 
-For fast local iteration, install Node.js 20 or newer once, then from the project folder run `nvm use 24.21.0`, `npm ci` once, and `npm run dev:local`. This starts the local API with Node watch mode and the Vite interface with hot reload. Open `http://127.0.0.1:5173`; changes to React/CSS refresh in the browser, and server changes restart the API. Press Ctrl+C to stop both.
+Available generation paths and model support depend on the selected backend and workflow. A model appearing in a list does not mean every ComfyUI graph supports it.
 
-The development API uses `http://127.0.0.1:4180` and keeps settings/media under the ignored `data/` folder in the source checkout, separate from the installed app. If port 4180 is already in use, set `$env:LOCAL_FLOW_PORT=4181` in PowerShell before `npm run dev:local`. The Vite proxy uses the same value. Use `npm run desktop` when you want the Electron shell; use the Vite workflow above for hot-reload iteration.
+## How the workflow fits together
 
-## Publish a Windows release
+1. **Start a project** and set its name and target length.
+2. **Develop the concept** with Story Chat. Revise the premise and creative direction together.
+3. **Prepare visual continuity** in the Asset Editor using character, setting, prop, uniform, and style references.
+4. **Create the storyboard** and review scene actions, prompts, and timing.
+5. **Generate keyframes and clips** in Studio. Select among variants and regenerate individual scenes as needed.
+6. **Add speech and sound**, then assemble and edit the sequence in the Timeline editor.
+7. **Export the finished video** or a storyboard document.
 
-Push a version tag such as `v0.4.4`. The Windows GitHub Actions workflow uses the lockfile, builds the app, packages a per-user NSIS installer, verifies the EXE artifact, and attaches `Local-Flow-Setup-<version>.exe` to the GitHub Release. The installer is unsigned unless repository secrets `WINDOWS_CERTIFICATE_BASE64` and `WINDOWS_CERTIFICATE_PASSWORD` are configured. After adding or changing dependencies, run `npm install` and commit the updated `package-lock.json` before publishing a release.
+Story, image, video, and audio generation are local when the chosen model and runtime run locally. Hosted providers remain optional and may incur charges.
 
-## Workflow
+## Install the Windows app
 
-Local Flow supports four generation paths: text-to-image, text-to-video, image-to-video, and storyboard-to-video. A project can contain many scenes, each with editable prompts, a duration, a reference/keyframe, and one or more generated image/video variants.
+1. Open [Releases](https://github.com/JBrace1990/LocalFlow/releases).
+2. Download the latest `Local-Flow-Setup-<version>.exe`.
+3. Run the installer. It installs per-user and adds Start Menu and Desktop shortcuts.
+4. Launch **Local Flow**. The app starts its desktop shell and local API.
 
-1. Create or edit a storyboard, or generate one locally with Ollama. Select the scene count and style in the storyboard dialog.
-2. Generate images from prompts or import a visual reference. The built-in Z-Image-Turbo workflow runs through local ComfyUI.
-3. Generate video from text or animate a scene keyframe. Use Generate all clips from the storyboard to queue scenes in order. Generation jobs are persisted and reconciled into the UI after reload; jobs missing from the ComfyUI queue/history are surfaced as failed, while existing saved outputs can be recovered.
-4. Choose 1–4 outputs per run. Regenerated images and clips are retained as selectable variants on their scene.
-5. Assemble two or more scene clips manually from Export, or enable automatic assembly in Settings to join clips when every scene has a video. Assembly follows storyboard order and saves an MP4 to the selected media folder.
+The installer bundles the Local Flow desktop runtime and FFmpeg. It does **not** bundle AI model weights. ComfyUI, its Python/CUDA environment, and model files are managed separately because they depend on your system and GPU.
 
-Settings include dependency status, ComfyUI/Ollama launch controls, image/video workflow overrides, model folders, output folder, local Kokoro or compatible TTS settings, SFX service settings, default batch count, automatic assembly, frame rate, and an optional FFmpeg executable path. ComfyUI and Ollama can be detected and launched as hidden local services, then reused by generation workflows. Kokoro speech supports English voices, CPU inference, and selectable model precision; its model weights are not bundled in the installer and can be downloaded on first speech generation or prepared ahead of time from the dependency manager. The timeline editor has audio waveforms, preview scrubbing, snapping, zoom, undo/redo, clip positioning, trim-in, split-at-playhead, volume, fades, per-clip burned-in title/caption overlays, and MP4 export presets from 340p through 1080p. Project archives include the storyboard, timeline, and referenced local media, and can be reopened from Export.
+Portable builds, when published, use `Local-Flow-Portable-<version>.exe`. App data is kept in the Windows user profile; keep a backup of that data when moving between machines.
 
-The bundled FFmpeg executable is distributed by the `ffmpeg-static` package and is licensed under GPL-3.0-or-later. See [FFmpeg source and licensing](https://ffmpeg.org/legal.html) and the `ffmpeg-static` release sources. Users who redistribute the installer should provide the corresponding FFmpeg source and license notices with their release.
-## Story development
+## Run from source
 
-The Story chat workspace uses a local Ollama model to develop the premise with you, then creates a titled storyboard with a shared visual continuity guide. Add reference images to the chat workspace to use them across each scene keyframe. The automatic keyframe option queues image generation for every scene.
+### Requirements
 
-## Models and providers
+- Windows 10 or 11, 64-bit
+- Node.js 22 or newer for development
+- Git
+- ComfyUI for local image/video workflows
+- Ollama for local Story Chat and storyboard planning (optional but recommended)
 
-- Local Ollama models are used for storyboard text generation. Ollama model files are managed by Ollama and appear in the storyboard model selector.
-- The model-folder scanner discovers weight files at startup, every minute, and on demand. Add model folders in Settings. ComfyUI models are also detected automatically from its model paths. Local Flow lists ready-to-run Z-Image-Turbo and MiniMax H3 presets when all required files are present.
-- The Hugging Face browser searches repositories and downloads selected weight files into the chosen model folder. It does not install model dependencies or inference runtimes.
-- MiniMax Image-01 and H3 are hosted APIs; they are not downloadable local model weights. Enter a MiniMax API key in the app to use them. The key remains in browser memory and is passed to the local API only for requests. Hosted generation can incur charges.
-- ComfyUI is the local image/video runtime. Local Flow detects the local server and provides built-in Z-Image-Turbo keyframe and MiniMax H3 image-to-video presets. Optional API-format workflows exported from ComfyUI can override those presets in Settings.
+Install ComfyUI and Ollama separately if you want to use them. Local Flow can detect and start configured local installations from Settings. Models and model-specific ComfyUI nodes remain external to the installer.
 
-## Media
+### Start the development app
 
-Media destination, imported references, and generated clips use the selected folder. The media library supports reversible trash, restore, manual empty-trash, and automatic removal after 30 days. Local Flow settings and trash metadata are under `data/`.
+In PowerShell, from the repository folder:
+
+```powershell
+nvm install 24.21.0
+nvm use 24.21.0
+npm ci
+npm run dev:local
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite refreshes the interface as you edit it, while Node watch mode restarts the local API after server changes. Press **Ctrl+C** in that terminal to stop both processes.
+
+The development API uses port `4180` and stores development data in the ignored `data/` folder in this checkout. If the port is already in use, choose another port before starting:
+
+```powershell
+$env:LOCAL_FLOW_PORT = "4181"
+npm run dev:local
+```
+
+For the Electron shell instead of the browser development workflow:
+
+```powershell
+npm run desktop
+```
+
+### Build and test
+
+```powershell
+npm run build
+node --test
+```
+
+To package a Windows installer locally:
+
+```powershell
+npm run release:windows
+```
+
+A release build may require Windows build tools and internet access for dependency downloads.
+
+## Local services and models
+
+| Service | Used for | Notes |
+| --- | --- | --- |
+| **ComfyUI** | Image and video workflows | Run locally and select compatible workflows and model files. Local Flow can start a configured installation in the background. |
+| **Ollama** | Story Chat and storyboard planning | Install Ollama and download a language model separately. |
+| **Kokoro** | Text-to-speech | Runs inside Local Flow. The selected voice model is downloaded separately and can be prepared from Settings. |
+| **Local sound endpoint** | Sound effects | Configure a loopback OpenAI-compatible audio generation service in Settings. |
+| **MiniMax APIs** | Hosted image/video models | Require API credentials. Hosted requests may incur charges. |
+
+Model weights are not bundled. Use **Settings → Models** to discover model folders and manage supported downloads. ComfyUI workflow compatibility determines whether a model can be used for a particular task; custom API-format workflows can be configured in Settings.
+
+## Where files are stored
+
+The packaged app stores its settings and project data under the current Windows user's application data directory, in a `Local Flow\data` folder. The development server stores its data in the repository's ignored `data/` directory. Generated media is saved in the configured media folder.
+
+Back up project data and media separately from model weights. If you change the media destination, make sure the new folder is included in your backup plan.
+
+## Troubleshooting
+
+### ComfyUI is not connected
+
+- Open **Settings → ComfyUI** and confirm the local server address.
+- Check that ComfyUI is running and that the address uses the correct port.
+- Use the dependency manager's refresh or background-start action.
+- Confirm the selected model files and required custom nodes are installed in the ComfyUI environment Local Flow detects.
+
+### Story Chat cannot find a language model
+
+- Open **Settings → LLM** and check the Ollama server address.
+- Confirm Ollama is running, then download a model with Ollama.
+- Refresh the model list in Story Chat.
+
+### A model is unavailable or generation fails
+
+- Confirm the selected model is downloaded and belongs to the configured model folders.
+- Check that the chosen workflow supports that model and task.
+- Review ComfyUI's queue and error output; custom nodes and model requirements are managed by ComfyUI.
+
+### Audio generation is unavailable
+
+- Kokoro speech and sound-effect generation use separate paths. Configure the sound service in **Settings → Audio & Sound** if you use an external local endpoint.
+
+## Contributing
+
+Issues and pull requests are welcome. Please include:
+
+- Windows version and Local Flow version
+- The selected model and ComfyUI workflow, if relevant
+- The exact steps to reproduce
+- Relevant error text, with API keys and personal data removed
+
+For UI changes, check both Light and Dark appearance modes and confirm that controls remain readable with different accent themes.
+
+## License
+
+This repository does not yet include a project-wide license. Until one is added, no blanket permission is granted to redistribute or modify the project. Third-party components retain their own licenses; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
