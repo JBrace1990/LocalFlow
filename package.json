@@ -54,6 +54,8 @@
     },
     "files": [
       "dist/**/*",
+      "*.js",
+      "src/**/*.js",
       "server.js",
       "electron/**/*",
       "THIRD-PARTY-NOTICES.md",
