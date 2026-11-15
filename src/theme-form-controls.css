@@ -50,3 +50,8 @@
   outline-offset: 1px;
   border-color: var(--accent);
 }
+
+/* Local Flow has no signed-in user profile; keep the decorative placeholder out of the top bar. */
+.app-shell .topbar .top-avatar {
+  display: none;
+}
