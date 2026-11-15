@@ -1,0 +1,52 @@
+.app-shell {
+  color-scheme: dark;
+}
+
+.app-shell.appearance-light {
+  color-scheme: light;
+}
+
+.app-shell :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]),
+  select,
+  textarea
+) {
+  color: var(--field-text, var(--soft));
+  background-color: var(--field-bg, var(--panel2));
+  border: 1px solid var(--field-border, var(--line));
+  border-radius: 5px;
+  max-width: 100%;
+  font: inherit;
+}
+
+.app-shell :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]),
+  select
+) {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 9px;
+}
+
+.app-shell textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 8px 9px;
+  resize: vertical;
+}
+
+.app-shell :is(input, textarea)::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.app-shell select option {
+  color: var(--field-text, var(--soft));
+  background-color: var(--field-bg, var(--panel2));
+}
+
+.app-shell :is(input, select, textarea):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import './theme-form-controls.css';
 import { finalAssemblyState } from './final-assembly.js';
 import { timelineMediaDuration } from './timeline-media.js';
 import { parseExportOutputPath } from './timeline-export.js';
