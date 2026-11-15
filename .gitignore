@@ -1,0 +1,20 @@
+# Ignore installed dependencies, build output, and private local application state.
+node_modules/
+dist/
+data/
+.local-flow-dev/
+release/
+.npm-cache/
+.cache/
+.builder-cache/
+.electron-cache/
+.tmp-*/
+.env
+.env.*
+!.env.example
+
+# Local development logs
+local-flow-*.log
+
+release-portable/
+release-portable-*/
